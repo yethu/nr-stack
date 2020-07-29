@@ -3,9 +3,10 @@ import { ApplicationLoadBalancedFargateService } from '@aws-cdk/aws-ecs-patterns
 import { Artifact, Pipeline } from '@aws-cdk/aws-codepipeline';
 import { BuildSpec, PipelineProject } from '@aws-cdk/aws-codebuild';
 import { Cluster, ClusterProps, ContainerImage } from '@aws-cdk/aws-ecs';
-import { CodeBuildAction, EcsDeployAction, GitHubSourceAction, GitHubTrigger } from '@aws-cdk/aws-codepipeline-actions';
+import { CodeBuildAction, CodeCommitSourceAction, CodeCommitTrigger, EcsDeployAction, GitHubSourceAction, GitHubTrigger } from '@aws-cdk/aws-codepipeline-actions';
 import { ManagedPolicy } from '@aws-cdk/aws-iam';
 import { Repository } from '@aws-cdk/aws-ecr';
+import { Repository as CCRepository} from '@aws-cdk/aws-codecommit';
 import { SecretValue } from '@aws-cdk/core';
 
 interface NRStackProps extends cdk.StackProps {
@@ -23,20 +24,35 @@ export class NrStack extends cdk.Stack {
     let codepipleline = this.createCodePipeline();
 
 
-    const oauth = SecretValue.secretsManager('oauth', {
-      jsonField: 'oauth',
-    });
+    /** for github */
+    // const oauth = SecretValue.secretsManager('oauth', {
+    //   jsonField: 'oauth',
+    // });
 
     let sourceOutput = new Artifact();
 
-    let sourceAction = new GitHubSourceAction({
-      actionName: 'GitHubSource',
-      owner: props!.owner,
-      repo: props!.repo,
+    /** for github */
+    // let sourceAction = new GitHubSourceAction({
+    //   actionName: 'GitHubSource',
+    //   owner: props!.owner,
+    //   repo: props!.repo,
+    //   output: sourceOutput,
+    //   branch: 'master',
+    //   oauthToken: oauth,
+    //   trigger: GitHubTrigger.WEBHOOK,
+    // });
+
+    let ccRepository = new CCRepository(this, 'DevOpsTest',{
+      repositoryName: 'devops-test',
+      description: 'Repository for NodeRed',
+    });
+
+    let sourceAction = new CodeCommitSourceAction({
+      actionName: 'CodeCommitSource',
       output: sourceOutput,
+      repository: CCRepository.fromRepositoryName(this, 'NRCodeCommit', 'devops-test'),
+      trigger: CodeCommitTrigger.EVENTS,
       branch: 'master',
-      oauthToken: oauth,
-      trigger: GitHubTrigger.WEBHOOK,
     });
 
     let buildArtifact = new Artifact();
